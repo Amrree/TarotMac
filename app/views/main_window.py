@@ -2,13 +2,37 @@
 Main window controller for the Tarot application.
 """
 
-from AppKit import (
-    NSWindow, NSWindowController, NSRect, NSMakeRect,
-    NSTabView, NSTabViewItem, NSView, NSColor,
-    NSLayoutConstraint, NSLayoutAttributeTop, NSLayoutAttributeLeading,
-    NSLayoutAttributeTrailing, NSLayoutAttributeBottom
-)
-from Foundation import NSObject
+try:
+    from AppKit import (
+        NSWindow, NSWindowController, NSRect, NSMakeRect,
+        NSTabView, NSTabViewItem, NSView, NSColor,
+        NSLayoutConstraint, NSLayoutAttributeTop, NSLayoutAttributeLeading,
+        NSLayoutAttributeTrailing, NSLayoutAttributeBottom
+    )
+except ImportError:
+    # Use mock for testing when AppKit is not available
+    from ..mock_appkit import appkit_module
+    NSWindow = appkit_module.NSWindow
+    NSWindowController = appkit_module.NSWindowController
+    NSRect = appkit_module.NSRect
+    NSMakeRect = appkit_module.NSMakeRect
+    NSTabView = appkit_module.NSTabView
+    NSTabViewItem = appkit_module.NSTabViewItem
+    NSView = appkit_module.NSView
+    NSColor = appkit_module.NSColor
+    NSLayoutConstraint = appkit_module.NSLayoutConstraint
+    NSLayoutAttributeTop = appkit_module.NSLayoutConstraint.LayoutAttributeTop
+    NSLayoutAttributeLeading = appkit_module.NSLayoutConstraint.LayoutAttributeLeading
+    NSLayoutAttributeTrailing = appkit_module.NSLayoutConstraint.LayoutAttributeTrailing
+    NSLayoutAttributeBottom = appkit_module.NSLayoutConstraint.LayoutAttributeBottom
+
+try:
+    from Foundation import NSObject
+except ImportError:
+    # Use mock for testing when Foundation is not available
+    from ..mock_foundation import foundation_module
+    NSObject = foundation_module.NSObject
+
 import logging
 
 from app.views.home_view import HomeViewController

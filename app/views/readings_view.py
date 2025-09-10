@@ -2,18 +2,52 @@
 Readings view controller for drawing and managing tarot readings.
 """
 
-from AppKit import (
-    NSView, NSViewController, NSRect, NSMakeRect,
-    NSButton, NSTextField, NSTextView, NSColor,
-    NSFont, NSFontManager, NSLayoutConstraint,
-    NSLayoutAttributeTop, NSLayoutAttributeLeading,
-    NSLayoutAttributeTrailing, NSLayoutAttributeBottom,
-    NSLayoutAttributeCenterX, NSLayoutAttributeCenterY,
-    NSLayoutRelationEqual, NSLayoutConstraintOrientationHorizontal,
-    NSLayoutConstraintOrientationVertical
-)
-from Foundation import NSObject
+try:
+    from AppKit import (
+        NSView, NSViewController, NSRect, NSMakeRect,
+        NSButton, NSTextField, NSTextView, NSColor,
+        NSFont, NSFontManager, NSLayoutConstraint,
+        NSLayoutAttributeTop, NSLayoutAttributeLeading,
+        NSLayoutAttributeTrailing, NSLayoutAttributeBottom,
+        NSLayoutAttributeCenterX, NSLayoutAttributeCenterY,
+        NSLayoutRelationEqual, NSLayoutConstraintOrientationHorizontal,
+        NSLayoutConstraintOrientationVertical
+    )
+except ImportError:
+    # Use mock for testing when AppKit is not available
+    from ..mock_appkit import appkit_module
+    NSView = appkit_module.NSView
+    NSViewController = appkit_module.NSViewController
+    NSRect = appkit_module.NSRect
+    NSMakeRect = appkit_module.NSMakeRect
+    NSButton = appkit_module.NSButton
+    NSTextField = appkit_module.NSTextField
+    NSTextView = appkit_module.NSTextView
+    NSColor = appkit_module.NSColor
+    NSFont = appkit_module.NSFont
+    NSFontManager = appkit_module.NSFontManager
+    NSLayoutConstraint = appkit_module.NSLayoutConstraint
+    NSLayoutAttributeTop = appkit_module.NSLayoutConstraint.LayoutAttributeTop
+    NSLayoutAttributeLeading = appkit_module.NSLayoutConstraint.LayoutAttributeLeading
+    NSLayoutAttributeTrailing = appkit_module.NSLayoutConstraint.LayoutAttributeTrailing
+    NSLayoutAttributeBottom = appkit_module.NSLayoutConstraint.LayoutAttributeBottom
+    NSLayoutAttributeCenterX = appkit_module.NSLayoutConstraint.LayoutAttributeCenterX
+    NSLayoutAttributeCenterY = appkit_module.NSLayoutConstraint.LayoutAttributeCenterY
+    NSLayoutRelationEqual = appkit_module.NSLayoutConstraint.LayoutRelationEqual
+    NSLayoutConstraintOrientationHorizontal = appkit_module.NSLayoutConstraint.LayoutConstraintOrientationHorizontal
+    NSLayoutConstraintOrientationVertical = appkit_module.NSLayoutConstraint.LayoutConstraintOrientationVertical
+
+try:
+    from Foundation import NSObject
+except ImportError:
+    # Use mock for testing when Foundation is not available
+    from ..mock_foundation import foundation_module
+    NSObject = foundation_module.NSObject
+
 import logging
+
+from app.readings_manager import ReadingsManager
+from app.views.card_display import CardSpreadView
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +60,9 @@ class ReadingsViewController(NSViewController):
         self = super(ReadingsViewController, self).init()
         if self is None:
             return None
+        
+        # Initialize readings manager
+        self.readings_manager = ReadingsManager()
         
         self.setupView()
         return self
@@ -46,6 +83,9 @@ class ReadingsViewController(NSViewController):
         
         # Create interpretation area
         self.createInterpretationArea(view)
+        
+        # Create control buttons
+        self.createControlButtons(view)
         
         self.setView_(view)
     
@@ -86,28 +126,10 @@ class ReadingsViewController(NSViewController):
     
     def createCardDisplayArea(self, parent_view):
         """Create area for displaying drawn cards."""
-        # Card placeholder rectangles
-        card_width = 80
-        card_height = 120
-        card_spacing = 20
-        
-        # Center the cards
-        start_x = (parent_view.frame().size.width - (3 * card_width + 2 * card_spacing)) / 2
-        
-        for i in range(3):
-            x = start_x + i * (card_width + card_spacing)
-            y = 300
-            
-            card_view = NSView.alloc().initWithFrame_(
-                NSMakeRect(x, y, card_width, card_height)
-            )
-            card_view.setWantsLayer_(True)
-            card_view.layer().setBorderWidth_(1.0)
-            card_view.layer().setBorderColor_(NSColor.lightGrayColor().CGColor())
-            card_view.layer().setCornerRadius_(8.0)
-            card_view.layer().setBackgroundColor_(NSColor.darkGrayColor().CGColor())
-            
-            parent_view.addSubview_(card_view)
+        # Create card spread view
+        spread_rect = NSMakeRect(50, 200, 700, 300)
+        self.card_spread_view = CardSpreadView.alloc().initWithFrame_(spread_rect)
+        parent_view.addSubview_(self.card_spread_view)
     
     def createInterpretationArea(self, parent_view):
         """Create interpretation text area."""
@@ -124,19 +146,93 @@ class ReadingsViewController(NSViewController):
         interpretation_view.setFont_(font)
         
         parent_view.addSubview_(interpretation_view)
+        self.interpretation_view = interpretation_view
+    
+    def createControlButtons(self, parent_view):
+        """Create control buttons for the reading."""
+        # Draw cards button
+        draw_button = NSButton.alloc().initWithFrame_(
+            NSMakeRect(50, 150, 120, 40)
+        )
+        draw_button.setTitle_("Draw Cards")
+        draw_button.setTarget_(self)
+        draw_button.setAction_("drawCardsPressed:")
+        draw_button.setBordered_(True)
+        draw_button.setBezelStyle_(NSButton.RoundedBezelStyle)
+        parent_view.addSubview_(draw_button)
+        
+        # Clear reading button
+        clear_button = NSButton.alloc().initWithFrame_(
+            NSMakeRect(180, 150, 120, 40)
+        )
+        clear_button.setTitle_("Clear Reading")
+        clear_button.setTarget_(self)
+        clear_button.setAction_("clearReadingPressed:")
+        clear_button.setBordered_(True)
+        clear_button.setBezelStyle_(NSButton.RoundedBezelStyle)
+        parent_view.addSubview_(clear_button)
     
     # Button actions
     def singleCardPressed_(self, sender):
         """Handle single card spread selection."""
         logger.info("Single card spread selected")
-        # TODO: Implement single card draw
+        self.createReading("single")
     
     def threeCardPressed_(self, sender):
         """Handle three card spread selection."""
         logger.info("Three card spread selected")
-        # TODO: Implement three card draw
+        self.createReading("three")
     
     def celticCrossPressed_(self, sender):
         """Handle Celtic Cross spread selection."""
         logger.info("Celtic Cross spread selected")
-        # TODO: Implement Celtic Cross draw
+        self.createReading("celtic_cross")
+    
+    def drawCardsPressed_(self, sender):
+        """Handle draw cards button press."""
+        logger.info("Draw cards button pressed")
+        self.drawCards()
+    
+    def clearReadingPressed_(self, sender):
+        """Handle clear reading button press."""
+        logger.info("Clear reading button pressed")
+        self.clearReading()
+    
+    def createReading(self, spread_type):
+        """Create a new reading with the specified spread type."""
+        success = self.readings_manager.createReading(spread_type)
+        if success:
+            logger.info(f"Created {spread_type} reading")
+            self.updateInterpretation("Reading created. Click 'Draw Cards' to begin.")
+        else:
+            logger.error(f"Failed to create {spread_type} reading")
+            self.updateInterpretation("Failed to create reading. Please try again.")
+    
+    def drawCards(self):
+        """Draw cards for the current reading."""
+        success = self.readings_manager.drawCards()
+        if success:
+            # Update card display
+            cards_data = self.readings_manager.getReadingCards()
+            spread_type = self.readings_manager.getCurrentSpreadType()
+            self.card_spread_view.setSpread(cards_data, spread_type)
+            
+            # Update interpretation
+            interpretation = self.readings_manager.getReadingInterpretation()
+            self.updateInterpretation(interpretation)
+            
+            logger.info("Cards drawn successfully")
+        else:
+            logger.error("Failed to draw cards")
+            self.updateInterpretation("Failed to draw cards. Please try again.")
+    
+    def clearReading(self):
+        """Clear the current reading."""
+        self.readings_manager.clearReading()
+        self.card_spread_view.setSpread([], "single")
+        self.updateInterpretation("Reading cleared. Select a spread to begin.")
+        logger.info("Reading cleared")
+    
+    def updateInterpretation(self, text):
+        """Update the interpretation text."""
+        self.interpretation_view.setString_(text)

@@ -1,0 +1,36 @@
+[
+  {
+    "id": "demo_reading_1",
+    "spread_type": "single",
+    "cards": [
+      {
+        "name": "The Fool",
+        "orientation": "upright"
+      }
+    ],
+    "interpretation": "A new beginning awaits you.",
+    "summary": "New beginning reading",
+    "timestamp": "2025-09-10T12:39:02.686848"
+  },
+  {
+    "id": "demo_reading_2",
+    "spread_type": "three",
+    "cards": [
+      {
+        "name": "The Magician",
+        "orientation": "upright"
+      },
+      {
+        "name": "The High Priestess",
+        "orientation": "reversed"
+      },
+      {
+        "name": "The Empress",
+        "orientation": "upright"
+      }
+    ],
+    "interpretation": "You have the power to manifest your desires.",
+    "summary": "Power and manifestation reading",
+    "timestamp": "2025-09-10T12:39:02.686858"
+  }
+]

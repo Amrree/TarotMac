@@ -1,7 +1,23 @@
 """Home view controller."""
 
-from AppKit import NSView, NSViewController, NSMakeRect, NSColor, NSTextField
-from Foundation import NSObject
+try:
+    from AppKit import NSView, NSViewController, NSMakeRect, NSColor, NSTextField
+except ImportError:
+    # Use mock for testing when AppKit is not available
+    from ..mock_appkit import appkit_module
+    NSView = appkit_module.NSView
+    NSViewController = appkit_module.NSViewController
+    NSMakeRect = appkit_module.NSMakeRect
+    NSColor = appkit_module.NSColor
+    NSTextField = appkit_module.NSTextField
+
+try:
+    from Foundation import NSObject
+except ImportError:
+    # Use mock for testing when Foundation is not available
+    from ..mock_foundation import foundation_module
+    NSObject = foundation_module.NSObject
+
 import logging
 
 logger = logging.getLogger(__name__)

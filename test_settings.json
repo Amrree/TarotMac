@@ -1,0 +1,21 @@
+{
+  "app_config": {
+    "app_name": "Tarot",
+    "version": "1.0.0",
+    "database_path": "tarot.db",
+    "log_level": "INFO",
+    "theme": "dark",
+    "auto_save": true,
+    "backup_enabled": true,
+    "backup_interval": 7
+  },
+  "user_preferences": {
+    "default_spread": "single",
+    "card_orientation": "upright",
+    "interpretation_style": "detailed",
+    "ai_model": "llama3.2",
+    "chat_history_limit": 100,
+    "export_format": "json",
+    "encryption_enabled": false
+  }
+}

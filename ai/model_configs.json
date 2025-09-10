@@ -1,0 +1,20 @@
+{
+  "current_model": "llama3.2:3b",
+  "custom_models": [
+    {
+      "name": "custom-model",
+      "display_name": "Custom Model",
+      "size": "small",
+      "purpose": "tarot",
+      "description": "A custom model",
+      "parameters": 2000000000,
+      "context_length": 6000,
+      "recommended_temperature": 0.7,
+      "recommended_top_p": 0.9,
+      "max_tokens": 2000,
+      "is_available": false,
+      "download_size_gb": 0.0,
+      "tags": []
+    }
+  ]
+}
