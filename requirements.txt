@@ -1,0 +1,30 @@
+# Core Dependencies
+PyObjC>=9.0
+PyObjC-Framework-Cocoa>=9.0
+PyObjC-Framework-AppKit>=9.0
+PyObjC-Framework-CoreData>=9.0
+
+# Database
+SQLAlchemy>=2.0.0
+alembic>=1.12.0
+
+# AI Integration
+ollama>=0.1.0
+pydantic>=2.0.0
+jsonschema>=4.0.0
+
+# Utilities
+python-dateutil>=2.8.0
+cryptography>=41.0.0
+keyring>=24.0.0
+
+# Development
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.0.0
+
+# Packaging
+py2app>=0.28.0
+setuptools>=65.0.0
