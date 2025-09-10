@@ -1,0 +1,934 @@
+{
+  "engine_specification": {
+    "version": "1.0.0",
+    "name": "Tarot Influence Engine",
+    "description": "Deterministic engine for computing card influences in tarot spreads",
+    "author": "Tarot App Team",
+    "created": "2024-01-01"
+  },
+  "api_contract": {
+    "input_schema": {
+      "type": "object",
+      "required": ["reading_id", "spread_type", "positions"],
+      "properties": {
+        "reading_id": {
+          "type": "string",
+          "description": "Unique identifier for the reading"
+        },
+        "date_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO8601 timestamp of the reading"
+        },
+        "spread_type": {
+          "type": "string",
+          "enum": ["single", "three_card", "celtic_cross", "relationship", "year_ahead"],
+          "description": "Type of tarot spread"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["position_id", "card_id", "orientation"],
+            "properties": {
+              "position_id": {
+                "type": "string",
+                "description": "Unique identifier for the position"
+              },
+              "card_id": {
+                "type": "string",
+                "description": "Unique identifier for the card"
+              },
+              "orientation": {
+                "type": "string",
+                "enum": ["upright", "reversed"],
+                "description": "Card orientation"
+              },
+              "x_coordinate": {
+                "type": "number",
+                "description": "X coordinate for adjacency calculation"
+              },
+              "y_coordinate": {
+                "type": "number",
+                "description": "Y coordinate for adjacency calculation"
+              }
+            }
+          }
+        },
+        "user_context": {
+          "type": "string",
+          "description": "Optional user question or context"
+        },
+        "rule_overrides": {
+          "type": "object",
+          "description": "Optional rule configuration overrides"
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "required": ["reading_id", "summary", "cards"],
+      "properties": {
+        "reading_id": {
+          "type": "string",
+          "description": "Unique identifier for the reading"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short human text summary of the reading"
+        },
+        "cards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["position", "card_id", "card_name", "orientation", "base_text", "influenced_text", "polarity_score", "intensity_score", "themes", "influence_factors", "journal_prompt"],
+            "properties": {
+              "position": {
+                "type": "string",
+                "description": "Position identifier"
+              },
+              "card_id": {
+                "type": "string",
+                "description": "Card identifier"
+              },
+              "card_name": {
+                "type": "string",
+                "description": "Human-readable card name"
+              },
+              "orientation": {
+                "type": "string",
+                "enum": ["upright", "reversed"],
+                "description": "Card orientation"
+              },
+              "base_text": {
+                "type": "string",
+                "description": "Canonical card text"
+              },
+              "influenced_text": {
+                "type": "string",
+                "description": "Final natural-language interpretation"
+              },
+              "polarity_score": {
+                "type": "number",
+                "minimum": -2.0,
+                "maximum": 2.0,
+                "description": "Polarity score (-2.0 to +2.0)"
+              },
+              "intensity_score": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+                "description": "Intensity score (0.0 to 1.0)"
+              },
+              "themes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 1.0
+                },
+                "description": "Theme weights (0.0 to 1.0)"
+              },
+              "influence_factors": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["source_position", "source_card_id", "effect", "explain"],
+                  "properties": {
+                    "source_position": {
+                      "type": "string",
+                      "description": "Source position identifier"
+                    },
+                    "source_card_id": {
+                      "type": "string",
+                      "description": "Source card identifier"
+                    },
+                    "effect": {
+                      "type": "number",
+                      "description": "Numeric effect of the influence"
+                    },
+                    "explain": {
+                      "type": "string",
+                      "description": "Human-readable explanation"
+                    },
+                    "confidence": {
+                      "type": "string",
+                      "enum": ["high", "medium", "low"],
+                      "description": "Confidence level of the influence"
+                    }
+                  }
+                }
+              },
+              "journal_prompt": {
+                "type": "string",
+                "description": "Thoughtful prompt for journaling"
+              }
+            }
+          }
+        },
+        "advice": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Practical advice items"
+        },
+        "follow_up_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Suggested follow-up questions"
+        }
+      }
+    }
+  },
+  "example_inputs": {
+    "single_card": {
+      "reading_id": "reading_001",
+      "date_time": "2024-01-01T12:00:00Z",
+      "spread_type": "single",
+      "positions": [
+        {
+          "position_id": "center",
+          "card_id": "sun",
+          "orientation": "upright",
+          "x_coordinate": 0.0,
+          "y_coordinate": 0.0
+        }
+      ],
+      "user_context": "What does today hold for me?"
+    },
+    "three_card": {
+      "reading_id": "reading_002",
+      "date_time": "2024-01-01T12:00:00Z",
+      "spread_type": "three_card",
+      "positions": [
+        {
+          "position_id": "past",
+          "card_id": "tower",
+          "orientation": "upright",
+          "x_coordinate": 0.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "present",
+          "card_id": "sun",
+          "orientation": "upright",
+          "x_coordinate": 1.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "future",
+          "card_id": "star",
+          "orientation": "upright",
+          "x_coordinate": 2.0,
+          "y_coordinate": 0.0
+        }
+      ],
+      "user_context": "How will my career transition unfold?"
+    },
+    "celtic_cross": {
+      "reading_id": "reading_003",
+      "date_time": "2024-01-01T12:00:00Z",
+      "spread_type": "celtic_cross",
+      "positions": [
+        {
+          "position_id": "center",
+          "card_id": "magician",
+          "orientation": "upright",
+          "x_coordinate": 0.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "cross",
+          "card_id": "high_priestess",
+          "orientation": "reversed",
+          "x_coordinate": 1.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "past",
+          "card_id": "ace_wands",
+          "orientation": "upright",
+          "x_coordinate": 0.0,
+          "y_coordinate": 1.0
+        },
+        {
+          "position_id": "future",
+          "card_id": "ten_cups",
+          "orientation": "upright",
+          "x_coordinate": 1.0,
+          "y_coordinate": 1.0
+        },
+        {
+          "position_id": "above",
+          "card_id": "emperor",
+          "orientation": "upright",
+          "x_coordinate": 0.0,
+          "y_coordinate": 2.0
+        },
+        {
+          "position_id": "below",
+          "card_id": "hermit",
+          "orientation": "reversed",
+          "x_coordinate": 1.0,
+          "y_coordinate": 2.0
+        },
+        {
+          "position_id": "self",
+          "card_id": "lovers",
+          "orientation": "upright",
+          "x_coordinate": 2.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "environment",
+          "card_id": "chariot",
+          "orientation": "upright",
+          "x_coordinate": 2.0,
+          "y_coordinate": 1.0
+        },
+        {
+          "position_id": "hopes",
+          "card_id": "temperance",
+          "orientation": "upright",
+          "x_coordinate": 2.0,
+          "y_coordinate": 2.0
+        },
+        {
+          "position_id": "outcome",
+          "card_id": "world",
+          "orientation": "upright",
+          "x_coordinate": 2.0,
+          "y_coordinate": 3.0
+        }
+      ],
+      "user_context": "What do I need to know about my current situation?"
+    },
+    "relationship": {
+      "reading_id": "reading_004",
+      "date_time": "2024-01-01T12:00:00Z",
+      "spread_type": "relationship",
+      "positions": [
+        {
+          "position_id": "you",
+          "card_id": "queen_cups",
+          "orientation": "upright",
+          "x_coordinate": 0.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "partner",
+          "card_id": "king_wands",
+          "orientation": "upright",
+          "x_coordinate": 1.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "relationship",
+          "card_id": "two_cups",
+          "orientation": "upright",
+          "x_coordinate": 0.5,
+          "y_coordinate": 1.0
+        },
+        {
+          "position_id": "challenge",
+          "card_id": "five_cups",
+          "orientation": "reversed",
+          "x_coordinate": 0.0,
+          "y_coordinate": 2.0
+        },
+        {
+          "position_id": "advice",
+          "card_id": "temperance",
+          "orientation": "upright",
+          "x_coordinate": 1.0,
+          "y_coordinate": 2.0
+        }
+      ],
+      "user_context": "What does my relationship need right now?"
+    },
+    "year_ahead": {
+      "reading_id": "reading_005",
+      "date_time": "2024-01-01T12:00:00Z",
+      "spread_type": "year_ahead",
+      "positions": [
+        {
+          "position_id": "january",
+          "card_id": "ace_pentacles",
+          "orientation": "upright",
+          "x_coordinate": 0.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "february",
+          "card_id": "two_swords",
+          "orientation": "upright",
+          "x_coordinate": 1.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "march",
+          "card_id": "three_wands",
+          "orientation": "upright",
+          "x_coordinate": 2.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "april",
+          "card_id": "four_cups",
+          "orientation": "reversed",
+          "x_coordinate": 3.0,
+          "y_coordinate": 0.0
+        },
+        {
+          "position_id": "may",
+          "card_id": "five_pentacles",
+          "orientation": "upright",
+          "x_coordinate": 0.0,
+          "y_coordinate": 1.0
+        },
+        {
+          "position_id": "june",
+          "card_id": "six_swords",
+          "orientation": "upright",
+          "x_coordinate": 1.0,
+          "y_coordinate": 1.0
+        },
+        {
+          "position_id": "july",
+          "card_id": "seven_wands",
+          "orientation": "upright",
+          "x_coordinate": 2.0,
+          "y_coordinate": 1.0
+        },
+        {
+          "position_id": "august",
+          "card_id": "eight_cups",
+          "orientation": "reversed",
+          "x_coordinate": 3.0,
+          "y_coordinate": 1.0
+        },
+        {
+          "position_id": "september",
+          "card_id": "nine_pentacles",
+          "orientation": "upright",
+          "x_coordinate": 0.0,
+          "y_coordinate": 2.0
+        },
+        {
+          "position_id": "october",
+          "card_id": "ten_wands",
+          "orientation": "reversed",
+          "x_coordinate": 1.0,
+          "y_coordinate": 2.0
+        },
+        {
+          "position_id": "november",
+          "card_id": "page_cups",
+          "orientation": "upright",
+          "x_coordinate": 2.0,
+          "y_coordinate": 2.0
+        },
+        {
+          "position_id": "december",
+          "card_id": "knight_swords",
+          "orientation": "upright",
+          "x_coordinate": 3.0,
+          "y_coordinate": 2.0
+        }
+      ],
+      "user_context": "What will this year bring for me?"
+    }
+  },
+  "example_outputs": {
+    "single_card": {
+      "reading_id": "reading_001",
+      "summary": "A day of joy, success, and vitality awaits you. The Sun brings clarity and positive energy to all your endeavors.",
+      "cards": [
+        {
+          "position": "center",
+          "card_id": "sun",
+          "card_name": "The Sun",
+          "orientation": "upright",
+          "base_text": "The Sun represents joy, success, and vitality. This card indicates a time of happiness, achievement, and positive energy in all areas of life.",
+          "influenced_text": "The Sun represents joy, success, and vitality. This card indicates a time of happiness, achievement, and positive energy in all areas of life.",
+          "polarity_score": 0.9,
+          "intensity_score": 0.8,
+          "themes": {
+            "joy": 0.9,
+            "success": 0.8,
+            "vitality": 0.7,
+            "clarity": 0.6
+          },
+          "influence_factors": [],
+          "journal_prompt": "Reflect on what brings you the most joy and how you can cultivate more of that energy in your daily life."
+        }
+      ],
+      "advice": [
+        "Embrace the positive energy and let it guide your decisions today.",
+        "Share your joy with others - your positive energy can be contagious.",
+        "Take time to appreciate the good things in your life."
+      ],
+      "follow_up_questions": [
+        "What specific areas of your life are feeling most successful right now?",
+        "How can you maintain this positive energy throughout the day?",
+        "What would you like to achieve while you have this clarity?"
+      ]
+    },
+    "three_card": {
+      "reading_id": "reading_002",
+      "summary": "Your career transition follows a pattern of necessary destruction leading to renewal and hope. The Tower's disruption creates space for The Sun's clarity and The Star's guidance.",
+      "cards": [
+        {
+          "position": "past",
+          "card_id": "tower",
+          "card_name": "The Tower",
+          "orientation": "upright",
+          "base_text": "The Tower represents sudden change, revelation, and the destruction of false structures. This card indicates a dramatic change that breaks down what no longer serves you.",
+          "influenced_text": "The Tower represents sudden change, revelation, and the destruction of false structures. This meaning is enhanced by The Sun, creating a narrative of transformation through crisis leading to renewal.",
+          "polarity_score": -0.3,
+          "intensity_score": 0.9,
+          "themes": {
+            "transformation": 0.8,
+            "breakthrough": 0.7,
+            "renewal": 0.6,
+            "disruption": 0.9
+          },
+          "influence_factors": [
+            {
+              "source_position": "present",
+              "source_card_id": "sun",
+              "effect": 0.4,
+              "explain": "The Sun's positive energy transforms The Tower's destruction into a necessary breakthrough",
+              "confidence": "high"
+            }
+          ],
+          "journal_prompt": "What structures in your life needed to be torn down to make room for something better?"
+        },
+        {
+          "position": "present",
+          "card_id": "sun",
+          "card_name": "The Sun",
+          "orientation": "upright",
+          "base_text": "The Sun represents joy, success, and vitality. This card indicates a time of happiness, achievement, and positive energy in all areas of life.",
+          "influenced_text": "The Sun represents joy, success, and vitality. This meaning is enhanced by The Tower's transformation and The Star's hope, creating a powerful narrative of renewal and guidance.",
+          "polarity_score": 1.2,
+          "intensity_score": 0.9,
+          "themes": {
+            "joy": 0.9,
+            "success": 0.8,
+            "vitality": 0.7,
+            "renewal": 0.8,
+            "guidance": 0.6
+          },
+          "influence_factors": [
+            {
+              "source_position": "past",
+              "source_card_id": "tower",
+              "effect": 0.3,
+              "explain": "The Tower's transformation enhances The Sun's renewal themes",
+              "confidence": "high"
+            },
+            {
+              "source_position": "future",
+              "source_card_id": "star",
+              "effect": 0.2,
+              "explain": "The Star's hope amplifies The Sun's positive energy",
+              "confidence": "medium"
+            }
+          ],
+          "journal_prompt": "How are you experiencing renewal and positive energy in your current situation?"
+        },
+        {
+          "position": "future",
+          "card_id": "star",
+          "card_name": "The Star",
+          "orientation": "upright",
+          "base_text": "The Star represents hope, inspiration, and spiritual guidance. This card indicates a time of healing, renewed faith, and the promise of better things to come.",
+          "influenced_text": "The Star represents hope, inspiration, and spiritual guidance. This meaning is enhanced by The Sun's clarity, creating a powerful combination of renewal and hope.",
+          "polarity_score": 0.8,
+          "intensity_score": 0.7,
+          "themes": {
+            "hope": 0.9,
+            "inspiration": 0.8,
+            "guidance": 0.7,
+            "healing": 0.6,
+            "renewal": 0.5
+          },
+          "influence_factors": [
+            {
+              "source_position": "present",
+              "source_card_id": "sun",
+              "effect": 0.2,
+              "explain": "The Sun's clarity enhances The Star's guidance themes",
+              "confidence": "medium"
+            }
+          ],
+          "journal_prompt": "What hopes and inspirations are guiding you toward your future goals?"
+        }
+      ],
+      "advice": [
+        "Embrace the transformation that's happening - it's leading to something better.",
+        "Use the clarity you have now to make important decisions.",
+        "Keep hope alive - better things are coming."
+      ],
+      "follow_up_questions": [
+        "What aspects of your old situation needed to be destroyed?",
+        "How are you experiencing renewal and positive energy right now?",
+        "What hopes are guiding you toward your future goals?"
+      ]
+    }
+  },
+  "rule_configurations": {
+    "default": {
+      "major_dominance": {
+        "enabled": true,
+        "multiplier": 1.5,
+        "override_threshold": 0.7
+      },
+      "adjacency_weighting": {
+        "enabled": true,
+        "distance_decay": 0.8,
+        "max_distance": 4.0
+      },
+      "elemental_dignities": {
+        "enabled": true,
+        "same_element_boost": 0.2,
+        "complementary_boost": 0.1,
+        "opposing_reduction": 0.15
+      },
+      "numerical_sequences": {
+        "enabled": true,
+        "ascending_boost": 0.15,
+        "descending_boost": 0.15,
+        "same_number_boost": 0.2
+      },
+      "suit_predominance": {
+        "enabled": true,
+        "three_card_boost": 0.25,
+        "four_card_boost": 0.35,
+        "opposing_reduction": 0.15
+      },
+      "reversal_propagation": {
+        "enabled": true,
+        "stability_reduction": 0.3,
+        "major_multiplier": 1.5
+      }
+    },
+    "conservative": {
+      "major_dominance": {
+        "enabled": true,
+        "multiplier": 1.2,
+        "override_threshold": 0.8
+      },
+      "adjacency_weighting": {
+        "enabled": true,
+        "distance_decay": 0.9,
+        "max_distance": 3.0
+      },
+      "elemental_dignities": {
+        "enabled": true,
+        "same_element_boost": 0.1,
+        "complementary_boost": 0.05,
+        "opposing_reduction": 0.1
+      },
+      "numerical_sequences": {
+        "enabled": true,
+        "ascending_boost": 0.1,
+        "descending_boost": 0.1,
+        "same_number_boost": 0.15
+      },
+      "suit_predominance": {
+        "enabled": true,
+        "three_card_boost": 0.15,
+        "four_card_boost": 0.25,
+        "opposing_reduction": 0.1
+      },
+      "reversal_propagation": {
+        "enabled": true,
+        "stability_reduction": 0.2,
+        "major_multiplier": 1.2
+      }
+    },
+    "assertive": {
+      "major_dominance": {
+        "enabled": true,
+        "multiplier": 2.0,
+        "override_threshold": 0.5
+      },
+      "adjacency_weighting": {
+        "enabled": true,
+        "distance_decay": 0.7,
+        "max_distance": 5.0
+      },
+      "elemental_dignities": {
+        "enabled": true,
+        "same_element_boost": 0.3,
+        "complementary_boost": 0.15,
+        "opposing_reduction": 0.2
+      },
+      "numerical_sequences": {
+        "enabled": true,
+        "ascending_boost": 0.2,
+        "descending_boost": 0.2,
+        "same_number_boost": 0.25
+      },
+      "suit_predominance": {
+        "enabled": true,
+        "three_card_boost": 0.35,
+        "four_card_boost": 0.45,
+        "opposing_reduction": 0.2
+      },
+      "reversal_propagation": {
+        "enabled": true,
+        "stability_reduction": 0.4,
+        "major_multiplier": 2.0
+      }
+    }
+  },
+  "spread_definitions": {
+    "single": {
+      "name": "Single Card",
+      "description": "A simple one-card reading for daily guidance",
+      "positions": [
+        {
+          "id": "center",
+          "name": "Center",
+          "x": 0.0,
+          "y": 0.0
+        }
+      ]
+    },
+    "three_card": {
+      "name": "Three Card Spread",
+      "description": "Past, Present, Future reading",
+      "positions": [
+        {
+          "id": "past",
+          "name": "Past",
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": "present",
+          "name": "Present",
+          "x": 1.0,
+          "y": 0.0
+        },
+        {
+          "id": "future",
+          "name": "Future",
+          "x": 2.0,
+          "y": 0.0
+        }
+      ]
+    },
+    "celtic_cross": {
+      "name": "Celtic Cross",
+      "description": "Comprehensive ten-card reading",
+      "positions": [
+        {
+          "id": "center",
+          "name": "Center",
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": "cross",
+          "name": "Cross",
+          "x": 1.0,
+          "y": 0.0
+        },
+        {
+          "id": "past",
+          "name": "Past",
+          "x": 0.0,
+          "y": 1.0
+        },
+        {
+          "id": "future",
+          "name": "Future",
+          "x": 1.0,
+          "y": 1.0
+        },
+        {
+          "id": "above",
+          "name": "Above",
+          "x": 0.0,
+          "y": 2.0
+        },
+        {
+          "id": "below",
+          "name": "Below",
+          "x": 1.0,
+          "y": 2.0
+        },
+        {
+          "id": "self",
+          "name": "Self",
+          "x": 2.0,
+          "y": 0.0
+        },
+        {
+          "id": "environment",
+          "name": "Environment",
+          "x": 2.0,
+          "y": 1.0
+        },
+        {
+          "id": "hopes",
+          "name": "Hopes",
+          "x": 2.0,
+          "y": 2.0
+        },
+        {
+          "id": "outcome",
+          "name": "Outcome",
+          "x": 2.0,
+          "y": 3.0
+        }
+      ]
+    },
+    "relationship": {
+      "name": "Relationship Spread",
+      "description": "Five-card reading for relationship insights",
+      "positions": [
+        {
+          "id": "you",
+          "name": "You",
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": "partner",
+          "name": "Partner",
+          "x": 1.0,
+          "y": 0.0
+        },
+        {
+          "id": "relationship",
+          "name": "Relationship",
+          "x": 0.5,
+          "y": 1.0
+        },
+        {
+          "id": "challenge",
+          "name": "Challenge",
+          "x": 0.0,
+          "y": 2.0
+        },
+        {
+          "id": "advice",
+          "name": "Advice",
+          "x": 1.0,
+          "y": 2.0
+        }
+      ]
+    },
+    "year_ahead": {
+      "name": "Year Ahead",
+      "description": "Twelve-card reading for monthly guidance",
+      "positions": [
+        {
+          "id": "january",
+          "name": "January",
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "id": "february",
+          "name": "February",
+          "x": 1.0,
+          "y": 0.0
+        },
+        {
+          "id": "march",
+          "name": "March",
+          "x": 2.0,
+          "y": 0.0
+        },
+        {
+          "id": "april",
+          "name": "April",
+          "x": 3.0,
+          "y": 0.0
+        },
+        {
+          "id": "may",
+          "name": "May",
+          "x": 0.0,
+          "y": 1.0
+        },
+        {
+          "id": "june",
+          "name": "June",
+          "x": 1.0,
+          "y": 1.0
+        },
+        {
+          "id": "july",
+          "name": "July",
+          "x": 2.0,
+          "y": 1.0
+        },
+        {
+          "id": "august",
+          "name": "August",
+          "x": 3.0,
+          "y": 1.0
+        },
+        {
+          "id": "september",
+          "name": "September",
+          "x": 0.0,
+          "y": 2.0
+        },
+        {
+          "id": "october",
+          "name": "October",
+          "x": 1.0,
+          "y": 2.0
+        },
+        {
+          "id": "november",
+          "name": "November",
+          "x": 2.0,
+          "y": 2.0
+        },
+        {
+          "id": "december",
+          "name": "December",
+          "x": 3.0,
+          "y": 2.0
+        }
+      ]
+    }
+  },
+  "validation_rules": {
+    "polarity_score": {
+      "min": -2.0,
+      "max": 2.0,
+      "description": "Polarity must be within valid range"
+    },
+    "intensity_score": {
+      "min": 0.0,
+      "max": 1.0,
+      "description": "Intensity must be within valid range"
+    },
+    "theme_weights": {
+      "min": 0.0,
+      "max": 1.0,
+      "description": "Theme weights must be within valid range"
+    },
+    "influence_factors": {
+      "required_fields": ["source_position", "source_card_id", "effect", "explain"],
+      "description": "All influence factors must have required fields"
+    },
+    "deterministic_output": {
+      "description": "Same input must produce same output",
+      "tolerance": 0.001
+    }
+  }
+}
