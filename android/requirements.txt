@@ -1,0 +1,26 @@
+# Android Tarot App Requirements
+# Core Kivy framework for cross-platform mobile development
+kivy==2.2.0
+kivymd==1.1.1
+
+# Core Python modules (reused from existing app)
+pydantic==2.5.0
+sqlalchemy==2.0.23
+cryptography==41.0.7
+
+# AI and LLM integration
+ollama==0.1.7
+asyncio-mqtt==0.16.1
+
+# Data handling and validation
+jsonschema==4.20.0
+python-dateutil==2.8.2
+
+# Android-specific dependencies
+plyer==2.1.0  # Platform-specific APIs
+pyjnius==1.4.2  # Java bridge for Android
+android==0.1  # Android-specific utilities
+
+# Development and testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
